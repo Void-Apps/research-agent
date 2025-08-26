@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.staging.local
+.env.production.local
+
+# Python virtual environment
+backend/venv/
+backend/.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Build outputs
+frontend/.next/
+frontend/out/
+frontend/build/
+backend/dist/
+
+# Testing
+coverage/
+.nyc_output/
+.pytest_cache/
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
