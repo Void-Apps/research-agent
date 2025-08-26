@@ -107,16 +107,101 @@ python run_tests.py
 - ✅ **Security**: Automated vulnerability scanning
 - ✅ **CI/CD**: GitHub Actions workflow with matrix testing
 
-## 📦 Installation
+## 📦 Installation & Deployment
 
-### Prerequisites
+### 🐳 Docker Deployment (Recommended)
+
+The easiest way to run the AI Research Agent is using Docker containers.
+
+#### Prerequisites
+
+- **Docker**: 20.10 or higher
+- **Docker Compose**: 2.0 or higher
+- **API Keys**: Google Scholar, Google Books, ScienceDirect
+
+#### Quick Start
+
+1. **Clone and Setup**:
+```bash
+git clone <repository-url>
+cd ai-research-agent
+```
+
+2. **Configure Environment**:
+```bash
+./scripts/setup-env.sh
+```
+
+3. **Validate Configuration**:
+```bash
+./scripts/validate-env.sh
+```
+
+4. **Install Security Hooks** (Recommended):
+```bash
+./scripts/install-git-hooks.sh
+```
+
+5. **Deploy**:
+```bash
+./scripts/deploy.sh -e development
+```
+
+6. **Access Application**:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+### 🔒 Security
+
+This project includes comprehensive security measures:
+
+- **Secret Detection**: Automated scanning for API keys and secrets
+- **Git Hooks**: Pre-commit hooks prevent accidental secret commits
+- **Environment Isolation**: Separate configurations for each environment
+- **Security Validation**: Built-in environment validation scripts
+
+**Security Scripts:**
+```bash
+# Check for potential secrets
+./scripts/check-secrets.sh
+
+# Install git security hooks
+./scripts/install-git-hooks.sh
+
+# Validate environment security
+./scripts/validate-env.sh
+```
+
+#### Deployment Environments
+
+**Development**:
+```bash
+./scripts/deploy.sh -e development
+```
+
+**Staging**:
+```bash
+./scripts/deploy.sh -e staging
+```
+
+**Production**:
+```bash
+./scripts/deploy.sh -e production
+```
+
+For detailed deployment instructions, see [DEPLOYMENT.md](DEPLOYMENT.md).
+
+### 🛠️ Manual Installation
+
+#### Prerequisites
 
 - **Node.js**: 18.x or 20.x
 - **Python**: 3.9, 3.10, or 3.11
 - **MongoDB**: 6.0 or later
 - **API Keys**: Google Scholar, Google Books, ScienceDirect, Agno AI
 
-### Frontend Setup
+#### Frontend Setup
 
 ```bash
 cd frontend
@@ -126,7 +211,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-### Backend Setup
+#### Backend Setup
 
 ```bash
 cd backend
@@ -138,7 +223,7 @@ cp .env.example .env
 python -m uvicorn main:app --reload
 ```
 
-### Environment Variables
+#### Environment Variables
 
 **Frontend (.env.local):**
 ```env
