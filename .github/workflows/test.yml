@@ -1,0 +1,201 @@
+name: Test Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  frontend-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Run linting
+      run: |
+        cd frontend
+        npm run lint
+    
+    - name: Run unit tests
+      run: |
+        cd frontend
+        npm run test:unit
+    
+    - name: Run integration tests
+      run: |
+        cd frontend
+        npm run test:integration
+    
+    - name: Generate coverage report
+      run: |
+        cd frontend
+        npm run test:coverage
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./frontend/coverage/lcov.info
+        flags: frontend
+        name: frontend-coverage
+        fail_ci_if_error: false
+
+  backend-tests:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
+    
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand(\"ping\")'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Set environment variables
+      run: |
+        echo "MONGODB_HOST=localhost" >> $GITHUB_ENV
+        echo "MONGODB_PORT=27017" >> $GITHUB_ENV
+        echo "MONGODB_DATABASE=test_ai_research_agent" >> $GITHUB_ENV
+        echo "ENVIRONMENT=test" >> $GITHUB_ENV
+        echo "GOOGLE_SCHOLAR_API_KEY=test_key" >> $GITHUB_ENV
+        echo "GOOGLE_BOOKS_API_KEY=test_key" >> $GITHUB_ENV
+        echo "SCIENCEDIRECT_API_KEY=test_key" >> $GITHUB_ENV
+    
+    - name: Run unit tests
+      run: |
+        cd backend
+        python -m pytest tests/ -v --tb=short -m "not integration" --maxfail=5
+    
+    - name: Run integration tests
+      run: |
+        cd backend
+        python -m pytest tests/test_integration_workflow.py -v --maxfail=3
+    
+    - name: Run main app tests
+      run: |
+        cd backend
+        python -m pytest tests/test_main_app.py -v --maxfail=3
+    
+    - name: Generate coverage report
+      run: |
+        cd backend
+        python -m pytest tests/ --cov=. --cov-report=xml --cov-report=html
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+        fail_ci_if_error: false
+
+  quality-gates:
+    runs-on: ubuntu-latest
+    needs: [frontend-tests, backend-tests]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run frontend quality checks
+      run: |
+        cd frontend
+        npm run test:coverage -- --coverageThreshold='{"global":{"branches":80,"functions":80,"lines":80,"statements":80}}'
+    
+    - name: Run backend quality checks
+      run: |
+        cd backend
+        python -m pytest tests/ --cov=. --cov-fail-under=80
+    
+    - name: Check code quality
+      run: |
+        echo "✅ All quality gates passed!"
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run frontend security audit
+      run: |
+        cd frontend
+        npm audit --audit-level=high
+    
+    - name: Run backend security scan
+      run: |
+        cd backend
+        pip install safety
+        safety check --json || true
+    
+    - name: Security scan complete
+      run: |
+        echo "✅ Security scan completed!"
