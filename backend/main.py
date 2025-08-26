@@ -10,16 +10,18 @@ import uuid
 
 from routers import research, health
 from error_handlers import setup_error_handlers, get_error_metrics
+from middleware.rate_limiting import rate_limiting_middleware, rate_limit_manager
+from monitoring import performance_monitor
+from logging_config import setup_enhanced_logging, add_log_aggregation, get_contextual_logger
 
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Set up enhanced logging
+setup_enhanced_logging()
+add_log_aggregation()
+
+logger = get_contextual_logger(__name__, service="ai-research-agent", component="main")
 
 app = FastAPI(
     title="AI Research Agent API",
@@ -45,6 +47,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Rate limiting middleware (applied first)
+@app.middleware("http")
+async def rate_limiting(request: Request, call_next):
+    return await rate_limiting_middleware(request, call_next)
+
 # Request timing and ID middleware
 @app.middleware("http")
 async def add_process_time_and_request_id(request: Request, call_next):
@@ -55,6 +62,15 @@ async def add_process_time_and_request_id(request: Request, call_next):
     start_time = time.time()
     response = await call_next(request)
     process_time = time.time() - start_time
+    
+    # Record request metrics
+    performance_monitor.record_request(
+        request_id=request_id,
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code,
+        duration_ms=process_time * 1000
+    )
     
     # Add headers
     response.headers["X-Process-Time"] = str(process_time)
