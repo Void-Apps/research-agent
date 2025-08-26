@@ -16,6 +16,7 @@ from services.google_books_service import GoogleBooksService
 from services.sciencedirect_service import ScienceDirectService
 from services.agno_ai_service import AgnoAIService, ResearchSynthesis
 from services.cache_service import CacheService
+from monitoring import monitor_async_operation, monitor_logger, performance_monitor
 
 logger = logging.getLogger(__name__)
 
